@@ -8,6 +8,9 @@
 #include "int_vector.hpp"
 #include "bit_vector_il.hpp"
 #include "rrr_vector.hpp"
+#include "rrri_vector.hpp"
+#include "r3d3_vector.hpp"
+#include "r3d3i_vector.hpp"
 #include "sd_vector.hpp"
 #include "hyb_vector.hpp"
 

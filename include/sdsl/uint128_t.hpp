@@ -29,7 +29,7 @@ namespace sdsl
 
 #ifdef MODE_TI
 
-typedef unsigned int uint128_t __attribute__((mode(TI)));
+  typedef unsigned int uint128_t __attribute__((mode(TI)));//todo remove from commit
 
 #else
 
@@ -84,6 +84,21 @@ class uint128_t
             }
             i -= x;
             return bits::sel(m_high, i) + 64;
+        }
+
+        // return bool for fast performance instead of uint8_t
+        // Due to this if index is greater than 128, we won't
+        // recognize it. Caller should take care of it
+        inline bool isBitSet(const uint32_t &index){
+            if (index < 64){
+              uint64_t mask = (uint64_t)1 << index;
+              return m_lo & mask;
+            }
+            else if (index < 128){
+              uint64_t mask = (uint64_t)1 << (index-64);
+              return m_high & mask;
+            }
+            return false;
         }
 
         inline uint128_t& operator+=(const uint128_t& x)
@@ -152,6 +167,7 @@ class uint128_t
 
         inline uint128_t operator<<(int x) const
         {
+            if (x==0) {return uint128_t(m_lo, m_high);}
             if (x < 64) {
                 auto high = (m_high << x) | (m_lo >> (64 - x));
                 auto lo = m_lo << x;
@@ -164,6 +180,12 @@ class uint128_t
 
         inline uint128_t operator>>(int x) const
         {
+            //do nothing if x=0
+        //otherwise this messes up bitstring
+        //e.g: uint256_t foo(0xeeeeeeeeeeeeeeee, 0xaaaaaaaaaaaaaaaa, {0xf7bdef7bdef7bdef, 0x55});
+        //foo = (foo >> 128);
+        //results {0xf7bdef7bdef7bdff, 0x55}
+                if (x==0) {return uint128_t(m_lo, m_high);}
             if (x < 64) {
                 auto lo = (m_lo >> x) | (m_high << (64 - x));
                 return uint128_t(lo, m_high >> x);
