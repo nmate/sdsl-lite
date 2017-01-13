@@ -27,11 +27,11 @@
 namespace sdsl
 {
 
-#ifdef MODE_TI
+  //#ifdef MODE_TI
 
-  typedef unsigned int uint128_t __attribute__((mode(TI)));//todo remove from commit
+//typedef unsigned int uint128_t __attribute__((mode(TI)));//todo remove from commit
 
-#else
+//#else
 
 class uint128_t
 {
@@ -266,7 +266,7 @@ class uint128_t
             return m_lo;
         }
 };
-#endif
+  //#endif
 
 std::ostream& operator<<(std::ostream& os, const uint128_t& x);
 

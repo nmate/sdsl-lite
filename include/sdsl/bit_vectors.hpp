@@ -11,6 +11,7 @@
 #include "rrri_vector.hpp"
 #include "r3d3_vector.hpp"
 #include "r3d3i_vector.hpp"
+#include "ef_pure.hpp"
 #include "sd_vector.hpp"
 #include "hyb_vector.hpp"
 

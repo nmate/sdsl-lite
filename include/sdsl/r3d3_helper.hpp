@@ -35,7 +35,7 @@
 namespace sdsl
 {
 
-  //! Trait struct for the binomial coefficient struct to handle different type of integers.
+  //! Trait struct for the r3d3 struct to handle different type of integers.
   /*! This generic implementation works for 64-bit integers.
    */
   template<uint16_t log_n>
@@ -90,7 +90,7 @@ namespace sdsl
     }
   };
 
-  //! Specialization of binomial_coefficients_trait for 128-bit integers.
+  //! Specialization of r3d3_trait for 128-bit integers.
   template<>
   struct r3d3_trait<7> {
     typedef uint128_t number_type;
