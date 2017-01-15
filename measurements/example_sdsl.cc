@@ -36,11 +36,13 @@ int main() {
   //b[2] = 1;
   //b[3] = 1;
   b[5] = 1;
-  //b[10] = 1;
+  b[10] = 1;
   //b[11] = 1;
   b[17] = 1;
   b[31] = 1;
   b[48] = 1;
   
-  ef_pure<> ef(b);  
+  ef_pure<> ef(b);
+  ef.printCompressedData();
+
 }

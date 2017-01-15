@@ -93,18 +93,13 @@ namespace sdsl
 
   private:
     size_type    m_size = 0;  // Size of the original bit_vector.
-    //rac_type     m_bt;     // Vector for the block types (bt). bt equals the
-    // number of set bits in the block.
     size_type    m_popcnt; // popcount of the original bv
     bit_vector   m_lba; //lower bits
     bit_vector   m_uba; //upper bits
-
-    //int_vector<> m_btnrp;  // Sample pointers into m_btnr.
-    //int_vector<> m_rank;   // Sample rank values.
-    //bit_vector   m_invert; // Specifies if a superblock (i.e. t_k blocks)
-    // have to be considered as inverted i.e. 1 and
-    // 0 are swapped
-    //uint32_t number_type_size;
+    size_type    m_lba_length;
+    size_type    m_uba_length;
+    size_type    m_lower_width;
+    size_type    m_msb_pos;
 
     void copy(const ef_pure& ef_pure)
     {
@@ -115,7 +110,6 @@ namespace sdsl
     }
 
   public:
-    const size_type& popcnt = m_popcnt;
     const bit_vector& lba   = m_lba;
     const bit_vector& uba   = m_uba;
 
@@ -144,90 +138,126 @@ namespace sdsl
       m_size = bv.size();
       bit_vector::const_iterator bvIt;
 
+      assert(m_size > 0);
       // Calculate popcnt and MSB position
-      int msb_pos = m_size;
-      int popcnt = 0;
+      uint32_t msb_pos = m_size;
+      m_popcnt = 0;
       for (bvIt = bv.begin(); bvIt != bv.end(); ++bvIt){
 	if (*bvIt) {
-         popcnt++;
+          m_popcnt++;
 	}
       }
+      assert(m_popcnt > 0);
 
       bvIt = bv.end();
       while (*bvIt != 1){
        	  --bvIt;
           --msb_pos;
       }
-      std::cout<<"msb_pos: "<<msb_pos<<std::endl;
-      std::cout<<"popcnt : "<<popcnt<<std::endl;
+      m_msb_pos = msb_pos;
 
-      // Calculate popcount
-      //m_popcnt = Todo
+      // Calculate l
+      m_lower_width = log2(m_msb_pos/m_popcnt);
 
-      //msb bit of bv
+      // Allocate memory for m_lba, m_uba
+      //m_lba = bit_vector(std::max(m_popcnt*m_lower_width, (size_type)64), 0);
+      m_lba = bit_vector(m_popcnt*m_lower_width, 0);
+      m_uba = bit_vector(m_popcnt+(m_msb_pos/2), 0);
 
-      //calculate l
+      // Compression:
+      uint32_t bit_pos = 0;
+      uint32_t cntOnes = 0;
+      uint32_t preUpVal = 0; //initially
+      uint64_t upPos = 0;
+      for (bvIt = bv.begin(); bvIt != bv.end(); ++bvIt){
+        if (*bvIt == 1){
+          cntOnes++;
 
+          // LBA
+          if (m_lower_width){
+	    uint32_t maskLBA = (1 << m_lower_width) - 1;
+            uint32_t lowVal = bit_pos & maskLBA;
+            m_lba.set_int((cntOnes-1)*m_lower_width, lowVal, m_lower_width);
+          }
+
+          // UBA
+          uint32_t upVal = bit_pos >> m_lower_width;
+          uint16_t gap = upVal - preUpVal;
+          uint16_t numOfZeros = 0;
+          while (gap--){
+            numOfZeros++;
+          }
+          preUpVal = upVal; //save
+          uint64_t upValUnary = 1 << numOfZeros;
+          m_uba.set_int(upPos, upValUnary, numOfZeros+1); 
+          upPos += numOfZeros + 1;
+        }
+        bit_pos++;
+      }
+      m_lba_length = m_popcnt*m_lower_width;
+      m_uba_length = upPos;
     }
 
-    //! Swap method
-    //void swap(r3d3_vector& r3d3)
-    //{
-    //  if (this != &r3d3) {
-    //    std::swap(m_size, r3d3.m_size);
-    //    m_bt.swap(r3d3.m_bt);
-    //    m_btnr.swap(r3d3.m_btnr);
-    //    m_btnrp.swap(r3d3.m_btnrp);
-    //    m_rank.swap(r3d3.m_rank);
-    //    m_invert.swap(r3d3.m_invert);
-    //  }
-    //}
-    // 
-    //void printCompressedBlock(const size_type &id){
-    //  size_type bt_idx = id; //block id
-    //  uint16_t bt = m_bt[bt_idx];
-    //  size_type s_id = bt_idx/t_k; //superblock's id
-    //  size_type btnrp = m_btnrp[ s_id ]; //pos until superblock
-    // 
-    //  for (size_type j = s_id*t_k; j < bt_idx; ++j) {
-    //    btnrp += r3d3_helper_type::space_for_bt(m_bt[j]);
-    //  }
-    //  uint16_t btnrlen = r3d3_helper_type::space_for_bt(bt);
-    // 
-    //  std::cout<<" bt_id: "<<bt_idx<<" ; bt: "<<bt<<" ; s_id: "<<s_id<<std::endl;
-    //  std::cout<<" btnrp: "<<btnrp<<" ; btnrlen: "<<btnrlen<<std::endl;
-    //  std::cout<<" Compr Block "<<id<<" : "<<r3d3_helper_type::get_int(m_btnr, btnrp, btnrlen)<<std::endl;
-    //}
+    void printCompressedData(){
+      std::cout<<"=== EF pure compression ==="<<std::endl;
+      std::cout<<" m_msb_pos     : "<<m_msb_pos<<std::endl;
+      std::cout<<" m_popcnt      : "<<m_popcnt<<std::endl;
+      std::cout<<" m_lower_width : "<<m_lower_width<<std::endl;
+      std::cout<<" m_lba_length  : "<<m_lba_length<<std::endl;
+      std::cout<<" m_lba.size()  : "<<m_lba.size()<<std::endl;
+      std::cout<<" m_uba_length  : "<<m_uba_length<<std::endl;
+      std::cout<<" m_uba.size()   : "<<m_uba.size()<<std::endl;
+
+      bit_vector::const_iterator bvIt;
+      std::cout<<std::endl;
+      std::cout<<"LBA: "<<std::endl;
+      for (bvIt = m_lba.begin(); bvIt != m_lba.end(); ++bvIt){
+	if (*bvIt == 1) {
+          std::cout<<"1 ";
+	}
+        else {
+	  std::cout<<"0 ";
+        }
+      }
+      std::cout<<std::endl;
+      std::cout<<"UBA: "<<std::endl;
+      for (bvIt = m_uba.begin(); bvIt != m_uba.end(); ++bvIt){
+	if (*bvIt == 1) {
+          std::cout<<"1 ";
+	}
+        else {
+	  std::cout<<"0 ";
+        }
+      }
+      std::cout<<std::endl;
+      std::cout<<std::endl;
+    }
 
     //! Accessing the i-th element of the original bit_vector
-    //value_type operator[](size_type i)const
-    //{
-    //  size_type bt_idx = i/t_bs; //start indexing with 0
-    //  uint16_t bt = m_bt[bt_idx];
-    //  size_type s_id = bt_idx/t_k; //superblock's id
-    // 
-    //#ifndef RRR_NO_OPT
-    //  if (bt == 0 or bt == t_bs) { // very effective optimization
-    //    if (m_invert[s_id]) bt = t_bs - bt;
-    //    return bt>0;
-    //  }
-    //#endif
-    //  uint16_t off = i % t_bs; //i - bt_idx*t_bs;
-    // 
-    //  uint16_t l = (bt > 0 ? log2(t_bs/bt) : 0);
-    // 
-    //  size_type btnrp = m_btnrp[ s_id ];
-    //  for (size_type j = s_id*t_k; j < bt_idx; ++j) {
-    //    btnrp += r3d3_helper_type::space_for_bt(m_bt[j]);
-    //  }
-    //  uint16_t btnrlen = r3d3_helper_type::space_for_bt(bt);
-    // 
-    //  // and give it to block decoding function than
-    //  bool is_bit_set = r3d3_helper_type::decode_bit_ef(m_btnr, btnrp, btnrlen, l, bt, off);
-    // 
-    //  if (m_invert[s_id]) is_bit_set = !is_bit_set;
-    //  return is_bit_set;
-    //}
+    value_type operator[](size_type i)const
+    {
+      
+      // LBA part
+      uint64_t lowVal = m_lba.get_int(i*m_lower_width, m_lower_width);
+
+      // UBA part
+      uint64_t upVal;
+      uint16_t gap = 1 << m_lower_width;
+      uint16_t gap_id = i / gap;
+      uint16_t nr_gaps = m_uba_length - m_popcnt;
+
+      // nothing is stored, value is 0
+      if ( gap_id > nr_gaps ) return false;
+
+      uint16_t gap_pos = 0;
+      if ( gap_id != 0 ){
+        select_support_mcl<> sb(m_uba);//special select!!, thats a cheat!
+        gap_pos = sb(gap_id) + 1;
+      }
+      //innen todo!!!
+
+      return 0;
+    }
 
     /*! \param idx Starting index of the binary representation of the integer.
      *  \param len Length of the binary representation of the integer. Default value is 64.
