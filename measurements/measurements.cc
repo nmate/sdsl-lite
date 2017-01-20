@@ -1,5 +1,5 @@
-//g++ -std=c++11 -ggdb -I/home/nagym/sdsl-lite/include -L/home/nagym/sdsl-lite/lib ./measurements.cc -o measurements -lsdsl -ldivsufsort -ldivsufsort64
-//g++ -std=c++11 -march=native -mavx -O3 -I/home/nagym/sdsl-lite/include -L/home/nagym/sdsl-lite/lib ./measurements.cc -o measurements -lsdsl -ldivsufsort -ldivsufsort64
+//g++ -D_BLOCK_SIZE_=16 -D_ARTIF_ -std=c++11 -ggdb -I/home/nagym/DevSdsl/include -L/home/nagym/DevSdsl/lib ./measurements.cc -o measurements -lsdsl -ldivsufsort -ldivsufsort64
+//g++ -D_BLOCK_SIZE_ -D_ARTIF_ -std=c++11 -march=native -mavx -O3 -I/home/nagym/DevSdsl/include -L/home/nagym/DevSdsl/lib ./measurements.cc -o measurements -lsdsl -ldivsufsort -ldivsufsort64
 
 #include <sdsl/suffix_arrays.hpp>
 #include <sdsl/wavelet_trees.hpp>
@@ -8,23 +8,38 @@
 #include <fstream>
 #include <stdlib.h>
 
-//#define _CORPUS_BITMAP_
-#define BIG_PRIME 1294471
+//#define BIG_PRIME 1294471
+//#define BIG_PRIME 15485863
+const uint64_t BIG_PRIME = 15485863; 
 
 #define MAX_NUM_OF_RUNS 1
-#define NUM_OF_POS 100
+#define NUM_OF_QUERIES 100
 
-#define ACCESS      0x01
-#define RANK        0x11
-#define SELECT      0x10
+#define ACCESS  0x1
+#define RANK    0x2
+#define SELECT  0x3
 
 #define OP_MODE ACCESS
+
+#define INPUT_PATH "/home/nagym/DevSdsl/measurements/input"
+#define RESULT_PATH "/home/nagym/DevSdsl/measurements/results"
 
 using namespace std;
 using namespace sdsl;
 
-//used 15, 16, 32, 48, 64, 96, 128, (160), 192, (224), 256
-const int block_size = 256;
+// _BLOCK_SIZE_ must be given in compile time
+// through g++ -DBLOCK_SIZE=X parameter !!!
+// used 15, 16, 32, 48, 64, 96, 128, (160), 192, (224), 256
+
+#ifndef _BLOCK_SIZE_
+const int block_size = 3;//dummy
+#else
+const int block_size = _BLOCK_SIZE_;
+#endif
+
+// Input files are stored here
+vector<string> inputFiles;
+vector<string>::iterator fileIt;
 
 __inline__ uint64_t rdtsc() {
   uint32_t low, high;
@@ -34,6 +49,15 @@ __inline__ uint64_t rdtsc() {
   __asm__ __volatile__ (
             "rdtsc" : "=a" (low), "=d" (high));
   return (uint64_t)high << 32 | low;
+}
+
+string getOpModeString(){
+  string opMode = "NOT_DEFINED";
+  if (OP_MODE == ACCESS) opMode = "ACCESS";
+  if (OP_MODE == RANK) opMode = "RANK";
+  if (OP_MODE == SELECT) opMode = "SELECT";
+
+  return opMode;
 }
 
 string stripPopulationFromFilename(const string& fileName){
@@ -57,13 +81,14 @@ double calculatePopulation(const bit_vector &bv){
     return pop;
 }
 
-void generateRndmPositions(uint32_t posArr[], const int &length, const int &range){
+void generateRndmPositions(uint64_t posArr[], const int &length, const uint64_t &range){
   for (int i=0; i < length; ++i){
     posArr[i] = ((i+1)*BIG_PRIME) % range;
   }
 }
 
 void printArray(uint32_t arr[], const int &length){
+  cout<<endl;
   cout<<" === Print Array ==="<<endl;
   for(int j=0; j < length; ++j){
     cout<<"["<<j<<"]: "<<arr[j]<<" ";
@@ -71,67 +96,23 @@ void printArray(uint32_t arr[], const int &length){
   cout<<endl;
 }
 
-void measureRRRSize(){
-  char* user;
-  user = getenv ("USER");
-
-  if (user == NULL)
-    printf ("Error: USER variable is invalid: %s", user);
-
-  string path = "/home/nagym";
-  //in single user mode user is root
-  //path.append(user);
-#ifndef _CORPUS_BITMAP_
-  path += "/ip_routing_src/EliasFano/src/input/big_bitmaps_100M/";
-#else
-  path += "/ip_routing_src/EliasFano/src/input/bitmap_corpus/";
+void measureCompressedBitmapSize(){
+  string path;
+  string resFile;
+#ifdef _ARTIF_
+  path    = (string)INPUT_PATH  + "/artificial/bitmaps/";
+  resFile = (string)RESULT_PATH + "/artificial_av_SIZE/SIZE_artif.txt"; 
+#elif _CORPUS_
+  path = (string)INPUT_PATH + "/bitmap_corpus/";
+  resFile = (string)RESULT_PATH + "/corpus_av_size/size_corpus.txt"; 
 #endif
-  vector<string> files;
   vector<string>::iterator f_it;
 
-#ifndef _CORPUS_BITMAP_
-  //random generated bitmpas:
-  files.push_back("bitmap_1000000_000001");
-  files.push_back("bitmap_1000000_000005");
-  files.push_back("bitmap_1000000_00001");
-  files.push_back("bitmap_1000000_00005");
-  files.push_back("bitmap_1000000_0001");
-  files.push_back("bitmap_1000000_0005");
-  files.push_back("bitmap_1000000_001");
-  files.push_back("bitmap_1000000_005");
-  files.push_back("bitmap_1000000_01");
-  files.push_back("bitmap_1000000_015");
-  files.push_back("bitmap_1000000_025");
-  files.push_back("bitmap_1000000_035");
-  files.push_back("bitmap_1000000_05");
-  files.push_back("bitmap_100000000_01");
-#else
-  //bitmap corpus:
-  files.push_back("fax_calg.bin_h");
-  files.push_back("reg-1.bmp.bin_h");
-  files.push_back("phd.bmp.bin_h");
-  files.push_back("zip.bmp.bin_h");
-  files.push_back("caida_4.bmp.bin_h");
-  files.push_back("caida_8.bmp.bin_h");
-  files.push_back("caida_16.bmp.bin_h");
-#endif
-
-  //Set filenames according to operation mode
-#ifndef _CORPUS_BITMAP_
-  const char operation[] = "results/size_rrr";
-#else
-  const char operation[] = "results/size_rrr_bm";
-#endif
-
-  char fileName[100]; //to hold the result
-  strcpy(fileName, operation);
-  strcat(fileName, ".txt");
-
   cout<<"========================================="<<endl;
-  cout<<"      Starting RRR size measurement      "<<endl;
+  cout<<"      Starting SIZE measurement"<<endl;
   cout<<"========================================="<<endl;
 
-  for (f_it=files.begin(); f_it < files.end(); ++f_it){
+  for (f_it=inputFiles.begin(); f_it < inputFiles.end(); ++f_it){
     string full_path_name = path + *f_it;
     ifstream file(full_path_name);
     if (!file.good()) {
@@ -154,24 +135,27 @@ void measureRRRSize(){
     rrri_vector<block_size>                     rrri(bv);
     r3d3_vector<block_size>                     r3d3(bv);
     r3d3i_vector<block_size>                    r3d3i(bv);
+    ef_pure<>                                   ef_pure(bv);
 
-    double size_rrr_Mb   = size_in_mega_bytes(rrr);
-    double size_rrri_Mb  = size_in_mega_bytes(rrri);
-    double size_r3d3_Mb  = size_in_mega_bytes(r3d3);
-    double size_r3d3i_Mb = size_in_mega_bytes(r3d3i);
-    cout<<"  Size of RRR   in MB: " << size_rrr_Mb << endl;
-    cout<<"  Size of RRRi  in MB: " << size_rrri_Mb << endl;
-    cout<<"  Size of R3D3  in MB: " << size_r3d3_Mb << endl;
-    cout<<"  Size of R3D3i in MB: " << size_r3d3i_Mb << endl;
+    double size_rrr_Mb     = size_in_mega_bytes(rrr);
+    double size_rrri_Mb    = size_in_mega_bytes(rrri);
+    double size_r3d3_Mb    = size_in_mega_bytes(r3d3);
+    double size_r3d3i_Mb   = size_in_mega_bytes(r3d3i);
+    double size_ef_pure_Mb = size_in_mega_bytes(ef_pure);
+    cout<<"  Size of RRR     in MB: " << size_rrr_Mb << endl;
+    cout<<"  Size of RRRi    in MB: " << size_rrri_Mb << endl;
+    cout<<"  Size of R3D3    in MB: " << size_r3d3_Mb << endl;
+    cout<<"  Size of R3D3i   in MB: " << size_r3d3i_Mb << endl;
+    cout<<"  Size of EF_PURE in MB: " << size_ef_pure_Mb << endl;
 
     //Obtain population (and entropy optionally)
-#ifndef _CORPUS_BITMAP_
+#ifdef _ARTIF_
     string pop = stripPopulationFromFilename(*f_it);
     int N = bv.size();
     //Convert N to MByte
     double N_Mb = (double)N/(8*1024.0*1024.0);
     double popD = std::stod(pop); //C++11
-#else
+#elif _CORPUS_
     double popD = calculatePopulation(bv);
     int N = bv.size();
     double N_Mb = (double)N/(8*1024.0*1024.0);
@@ -186,7 +170,7 @@ void measureRRRSize(){
 
     // Writing result into a csv file (for R)
     ofstream outFile;
-    outFile.open(fileName, ofstream::out | ofstream::app);
+    outFile.open(resFile, ofstream::out | ofstream::app);
 
     outFile<<block_size<<" "<<popD<<" rrr "<<size_rrr_Mb<<" rrri "<<size_rrri_Mb<<
       " r3d3 "<<size_r3d3_Mb<<" r3d3i "<<size_r3d3i_Mb<<" en "<<entropy<<" "<<*f_it<<endl;
@@ -286,83 +270,27 @@ void measureWTSize(){
     }
 }
 
+void measureBitmapOperation(){
+  string path;
+  string resFile;
 
-void measureRRROperation(){
-  //files to measure with different populations
-  char* user;
-  user = getenv ("USER");
-
-  if (user == NULL)
-    printf ("Error: USER variable is invalid: %s", user);
-
-  string path = "/home/nagym";
-  //path.append(user);
-#ifndef _CORPUS_BITMAP_
-  //path += "/ip_routing_src/EliasFano/src/input/big_bitmaps_100M/";
-  path += "/ip_routing_src/EliasFano/src/input/big_bitmaps/";
+  string opMode = getOpModeString();
+#ifdef _ARTIF_
+  path    = (string)INPUT_PATH  + "/artificial/bitmaps/";
+  resFile = (string)RESULT_PATH + "/artificial_av_" + opMode + "/" + opMode + "_artif.txt"; 
 #else
-  path += "/ip_routing_src/EliasFano/src/input/bitmap_corpus/";
-#endif
-  vector<string> files;
-  vector<string>::iterator f_it;
-
-  //continue refactor from here =============================
-  string opMode;
-#if (OP_MODE == ACCESS)
-  opMode = "access";
-#elif (OP_MODE == RANK)
-  opMode = "rank";
-#elif (OP_MODE == SELECT)
-  opMode = "select";
-#else
-  cout<<"Error: bad operation is given, exit!"<<endl;
-  exit(-1);
-#endif
-
-
-#ifndef _CORPUS_BITMAP_
-  //files.push_back("bitmap_1000000_000001");
-  //files.push_back("bitmap_1000000_000005");
-  //files.push_back("bitmap_1000000_00001");
-  //files.push_back("bitmap_1000000_00005");
-  //files.push_back("bitmap_1000000_0001");
-  //files.push_back("bitmap_1000000_0005");
-  //files.push_back("bitmap_1000000_001");
-  //files.push_back("bitmap_1000000_005");
-  files.push_back("bitmap_1000000_01");
-  files.push_back("bitmap_1000000_015");
-  //files.push_back("bitmap_1000000_025");
-  //files.push_back("bitmap_1000000_035");
-  //files.push_back("bitmap_1000000_05");
-  //files.push_back("bitmap_100000000_01");
-#else
-  files.push_back("fax_calg.bin_h");
-  files.push_back("reg-1.bmp.bin_h");
-  files.push_back("phd.bmp.bin_h");
-  files.push_back("zip.bmp.bin_h");
-  files.push_back("caida_4.bmp.bin_h");
-  files.push_back("caida_8.bmp.bin_h");
-  files.push_back("caida_16.bmp.bin_h");
-
-#endif
-
-  //Set filenames according to operation mode
-  string fileName;
-#ifndef _CORPUS_BITMAP_
-  //const char file[] = "results/rank_rrr";
-  fileName = "results/" + opMode + "_synth.txt";
-#else
-  //const char file[] = "results/rank_rrr_bm";
-  fileName = "results/" + opMode + "_corps.txt";
+  path = (string)INPUT_PATH + "/bitmap_corpus/";
+  resFile = (string)RESULT_PATH + "/corpus_av_" + opMode + "/" + opMode + "_corpus.txt"; 
 #endif
 
   cout<<"========================================="<<endl;
   cout<<"   Starting "<<opMode<<" measurement  "<<endl;
-  cout<<"   Output is written to: "<< fileName <<endl;
+  cout<<"   Number of queries: "<<NUM_OF_QUERIES<<endl;
+  cout<<"   Output is written to: "<< resFile <<endl;
   cout<<"========================================="<<endl;
 
-  for (f_it=files.begin(); f_it < files.end(); ++f_it){
-    string full_path_name = path + *f_it;
+  for (fileIt=inputFiles.begin(); fileIt < inputFiles.end(); ++fileIt){
+    string full_path_name = path + *fileIt;
     ifstream file(full_path_name);
     if (!file.good()) {
       cout<<"File does not exist...exit."<<endl;
@@ -370,29 +298,29 @@ void measureRRROperation(){
     }
     cout<<"Processing "<<full_path_name<<endl;
 
+    // Load input and calculate population (%)
     bit_vector bv;
-#ifndef _CORPUS_BITMAP_
+    double popD;
+#ifdef _ARTIF_
     load_from_file(bv, full_path_name);
+
+    string pop = stripPopulationFromFilename(*fileIt);
+    popD = std::stod(pop); //C++11
+    unsigned int popcnt_bv = bv.size()*popD;
 #else
     load_vector_from_file(bv, full_path_name, 0);
+
+    popD = calculatePopulation(bv);
+    unsigned int popcnt_bv = bv.size()*popD;
 #endif
     //cout<<"# of bits: "<<bv.size()<<endl;
     //cout<<"# of bits: "<<bv.bit_size()<<endl;
 
-    // Calculate theoretical popcnt
-#ifndef _CORPUS_BITMAP_
-    string pop = stripPopulationFromFilename(*f_it);
-    double popD = std::stod(pop); //C++11
-    unsigned int popcnt_bv = bv.size()*popD;
-#else
-    double popD = calculatePopulation(bv);
-    unsigned int popcnt_bv = bv.size()*popD;
-#endif
-
     //Just to double check
     //cout<<" Rank/Select query bound: "<<popcnt_bv<<endl;
 
-    // Structures
+    // Building up Data Structures
+    cout<<" Building up Data Structures ... ";
     rrr_vector<block_size>                    rrr(bv);
     rrri_vector<block_size>                   rrri(bv);
     r3d3_vector<block_size>                   r3d3(bv);
@@ -405,6 +333,7 @@ void measureRRROperation(){
     rrri_vector<block_size>::select_1_type    rrri_sel(&rrri);
     r3d3_vector<block_size>::select_1_type    r3d3_sel(&r3d3);
     r3d3i_vector<block_size>::select_1_type   r3d3i_sel(&r3d3i);
+    cout << " Done. " <<endl;
 
     // Timers
     double t1_cpu_start, t1_cpu_stop;
@@ -416,21 +345,23 @@ void measureRRROperation(){
     int pos = 0;
    
     // Generate random bit positions for acc/rank query
-    uint32_t rndmPosArrAccRank[NUM_OF_POS];
-    generateRndmPositions(rndmPosArrAccRank, NUM_OF_POS, bv.size());
-    //printArray(rndmPosArrAccRank, NUM_OF_POS);
+    cout<<" Generating random positions ... ";
+    uint64_t rndmPosArrAccRank[NUM_OF_QUERIES];
+    generateRndmPositions(rndmPosArrAccRank, NUM_OF_QUERIES, bv.size());
+    //printArray(rndmPosArrAccRank, NUM_OF_QUERIES);
 
     // Generate random bit positions for select query
-    uint32_t rndmPosArrSelect[NUM_OF_POS];
-    generateRndmPositions(rndmPosArrSelect, NUM_OF_POS, popcnt_bv);
-    //printArray(rndmPosArrSelect, NUM_OF_POS);
+    uint64_t rndmPosArrSelect[NUM_OF_QUERIES];
+    generateRndmPositions(rndmPosArrSelect, NUM_OF_QUERIES, popcnt_bv);
+    //printArray(rndmPosArrSelect, NUM_OF_QUERIES);
+    cout << " Done. " <<endl;
 
     // Measurements
-
+    cout<<" Start measurements ... ";
     /******** RRR ********/
     uint64_t tmp=0;//for avoiding optimization
     t1_cpu_start = rdtsc();
-    for (k=0; k < NUM_OF_POS; ++k){
+    for (k=0; k < NUM_OF_QUERIES; ++k){
 #if (OP_MODE == ACCESS)
       pos = rndmPosArrAccRank[k];
       tmp += rrr[pos];
@@ -443,12 +374,12 @@ void measureRRROperation(){
 #endif
     }
     t1_cpu_stop = rdtsc();
-    cout<<"tmp: "<<tmp<<endl;
+    cout<<" "<<tmp;
 
     /******** RRRi ********/
     tmp=0; i = 0;
     t2_cpu_start = rdtsc();
-    for (k=0; k < NUM_OF_POS; ++k){
+    for (k=0; k < NUM_OF_QUERIES; ++k){
 #if (OP_MODE == ACCESS)
       pos = rndmPosArrAccRank[k];
       tmp += rrri[pos];
@@ -461,12 +392,12 @@ void measureRRROperation(){
 #endif
     }
     t2_cpu_stop = rdtsc();
-    cout<<"tmp: "<<tmp<<endl;
+    cout<<" "<<tmp;
 
     /******** R3D3 ********/
     tmp = 0; i = 0;
     t3_cpu_start = rdtsc();
-    for (k=0; k < NUM_OF_POS; ++k){
+    for (k=0; k < NUM_OF_QUERIES; ++k){
 #if (OP_MODE == ACCESS)
       pos = rndmPosArrAccRank[k];
       tmp += r3d3[pos];    
@@ -479,12 +410,12 @@ void measureRRROperation(){
 #endif
     }
     t3_cpu_stop = rdtsc();
-    cout<<"tmp: "<<tmp<<endl;
+    cout<<" "<<tmp;
 
     /******** R3D3i ********/
     tmp = 0; i = 0;
     t4_cpu_start = rdtsc();
-    for (k=0; k < NUM_OF_POS; ++k){
+    for (k=0; k < NUM_OF_QUERIES; ++k){
 #if (OP_MODE == ACCESS)
       pos = rndmPosArrAccRank[k];
       tmp += r3d3i[pos];
@@ -497,7 +428,8 @@ void measureRRROperation(){
 #endif
     }
     t4_cpu_stop = rdtsc();
-    cout<<"tmp: "<<tmp<<endl;
+    cout<<" "<<tmp;
+    cout<<" Done."<<endl;
 
     double delta_t1 = t1_cpu_stop - t1_cpu_start;
     double delta_t2 = t2_cpu_stop - t2_cpu_start;
@@ -512,17 +444,17 @@ void measureRRROperation(){
       cout<<endl;*/
 
     // Average operation time
-    delta_t1 /= NUM_OF_POS; 
-    delta_t2 /= NUM_OF_POS; 
-    delta_t3 /= NUM_OF_POS; 
-    delta_t4 /= NUM_OF_POS;
+    delta_t1 /= NUM_OF_QUERIES; 
+    delta_t2 /= NUM_OF_QUERIES; 
+    delta_t3 /= NUM_OF_QUERIES; 
+    delta_t4 /= NUM_OF_QUERIES;
 
     // Writing result into file
     ofstream outFile;
-    outFile.open(fileName, ofstream::out | ofstream::app);
+    outFile.open(resFile, ofstream::out | ofstream::app);
 
     outFile<<block_size<<" "<<popD<<" rrr "<<delta_t1<<" rrri "<<delta_t2<<" r3d3 "<<
-      delta_t3<<" r3d3i "<<delta_t4<<" "<<*f_it<<" "<<rrr_rank.rank(bv.size())<<endl;
+      delta_t3<<" r3d3i "<<delta_t4<<" "<<*fileIt<<" "<<rrr_rank.rank(bv.size())<<endl;
 
     outFile.close();
   }
@@ -688,23 +620,29 @@ void measureBlockDecoderAccessSpeed(){
     double t2_cpu_start, t2_cpu_stop;
     double delta_t1, delta_t2;
 
-    string path = "/home/nagym";
-    path += "/ip_routing_src/EliasFano/src/input/big_bitmaps/";
-    vector<string> files;
-    vector<string>::iterator f_it;
-    files.push_back("bitmap_1000000_025");
+    string path = (string)INPUT_PATH + "/artificial/bitmaps/";
+    string fileName = "bitmap_1000000_01"; 
+
+    //vector<string> files;
+    //vector<string>::iterator f_it;
+    //files.push_back("bitmap_1000000_01");
 
     bit_vector bv;
-    string full_path_name = path + files[0];
+    string full_path_name = path + fileName;
     ifstream file(full_path_name);
     if (!file.good()) {
       cout<<"File does not exist...exit."<<endl;
       exit(-1);
     }
 
+    // Prepare rndm positions for query
+    uint64_t rndmPosArrAcc[block_size];
+    generateRndmPositions(rndmPosArrAcc, block_size, block_size);
+    //printArray(rndmPosArrAcc, block_size);
+
     //load_from_file(bv, full_path_name);
     load_vector_from_file(bv, full_path_name, 0);
-    double popD = calculatePopulation(bv);
+    string pop = stripPopulationFromFilename(fileName);
 
     //helper typedefs
     typedef rrr_helper<block_size> rrr_helper_type;
@@ -715,7 +653,7 @@ void measureBlockDecoderAccessSpeed(){
     uint64_t sum_t2 = 0;
     uint64_t numOfBlocks  = 0;
     uint64_t sum_size_rrr  = 0;
-    uint64_t sum_size_r3d3 = 0;
+    uint64_t sum_size_ef = 0;
     for (int pos = 0; pos < bv.size(); pos+=block_size){
       numOfBlocks++;
       //cout<<"pos: "<<pos<<endl;
@@ -724,76 +662,71 @@ void measureBlockDecoderAccessSpeed(){
       number_type bin = rrr_helper_type::trait::get_int(bv, pos, block_size);
       int bt = rrr_helper_type::trait::popcount(bin);
 
-      //*** ENCODE BIN TO RRR ***//
+      //*** ENCODE BIN TO RRR offset ***//
       number_type nr = rrr_helper_type::bin_to_nr(bin);
       uint16_t space_for_bt_rrr = rrr_helper_type::space_for_bt(bt);
       sum_size_rrr += space_for_bt_rrr;
 
-      //*** ENCODE BIN TO EF ***//
+      //*** ENCODE BIN TO EF offset ***//
       uint16_t msb_bit_pos = r3d3_helper_type::hi(bin);
       uint16_t space_for_bt_r3d3 = r3d3_helper_type::space_for_bt_i(msb_bit_pos, bt);
       bit_vector m_btnr(space_for_bt_r3d3);
       uint16_t l = (bt > 0 ? log2(msb_bit_pos/bt) : 0);
       r3d3_helper_type::compress_ef(m_btnr, 0, bin, l);
-      sum_size_r3d3 += space_for_bt_r3d3;
+      sum_size_ef += space_for_bt_r3d3;
 
       //*** MEASUREMENT ***//
-      //for (int run = 1; run <= MAX_NUM_OF_RUNS; ++run){
         int num = 0;
+        int bit_pos = 0;
         //RRR access each bit position
         t1_cpu_start = rdtsc();
         for (int i=0; i < block_size; ++i){
-          num += rrr_helper_type::decode_bit(bt, nr, i);
+          bit_pos = rndmPosArrAcc[i];
+          num += rrr_helper_type::decode_bit(bt, nr, bit_pos);
         }
         t1_cpu_stop = rdtsc();
         delta_t1 = t1_cpu_stop-t1_cpu_start;
-        delta_t1 /= 1000;
-        cout<<"cpu_time: "<<delta_t1<<endl;
+        delta_t1 /= block_size;
+        //cout<<"CPU time: "<<delta_t1<<endl;
         sum_t1 += delta_t1;
-        cout<<"num: "<<num<<endl;
+        //cout<<"Popcnt of block: "<<num<<endl;
 
         //EliasFano access each bit position
         num = 0;
         t2_cpu_start = rdtsc();
         for (int i=0; i < block_size; ++i){
-          num += r3d3_helper_type::decode_bit_ef(m_btnr, 0, space_for_bt_r3d3, l, bt, i);
+          bit_pos = rndmPosArrAcc[i];
+          num += r3d3_helper_type::decode_bit_ef(m_btnr, 0, space_for_bt_r3d3, l, bt, bit_pos);
         }
         t2_cpu_stop = rdtsc();
         delta_t2 = t2_cpu_stop-t2_cpu_start;
-        delta_t2 /= 1000;
-        cout<<"cpu_time: "<<delta_t2<<endl;
+        delta_t2 /= block_size;
+        //cout<<"CPU time: "<<delta_t2<<endl;
         sum_t2 += delta_t2;
-        cout<<"num: "<<num<<endl;
+        //cout<<"Popcnt of block: "<<num<<endl;
 
-        //checker
-        for (int i=0; i < block_size; ++i){
-          if (pos+i<bv.size()){//do not index out last block
-           bool isRRRBitSet = rrr_helper_type::decode_bit(bt, nr, i);
-           if (bv[pos+i] != isRRRBitSet) {
-            cout<<"ERR: b["<<pos+i<<"] = "<<bv[pos+i]<<" ; RRR["<<pos+i<<"] = "<<isRRRBitSet<<endl;
-           }
-           bool isR3D3BitSet = r3d3_helper_type::decode_bit_ef(m_btnr, 0, space_for_bt_r3d3, l, bt, i);
-           if (bv[pos+i] != isR3D3BitSet) {
-            cout<<"ERR: b["<<pos+i<<"] = "<<bv[pos+i]<<" ; R3D3["<<pos+i<<"] = "<<isR3D3BitSet<<endl;
-           }
-          }
-         }
-
-      //}
     }
     //*** WRITE RESULTS TO FILE ***
-    cout<<"sum RRR access: "<<sum_t1<<endl;
-    cout<<"sum EF  access: "<<sum_t2<<endl;
+    //cout<<"sum RRR access: "<<sum_t1<<endl;
+    //cout<<"sum EF  access: "<<sum_t2<<endl;
+
+    cout<<"Num of blocks: "<<numOfBlocks<<endl;
+    double av_access_rrr  = (double)sum_t1/(double)numOfBlocks;
+    double av_access_ef   = (double)sum_t2/(double)numOfBlocks;
+    cout<<"average RRR access: "<<av_access_rrr<<endl;
+    cout<<"average EF  access: "<<av_access_ef<<endl;
+
     double av_size_rrr  = (double)sum_size_rrr/(double)numOfBlocks;
-    double av_size_r3d3 = (double)sum_size_r3d3/(double)numOfBlocks;
+    double av_size_ef   = (double)sum_size_ef/(double)numOfBlocks;
     cout<<"average RRR  size : "<<av_size_rrr<<endl;
-    cout<<"average R3D3 size : "<<av_size_r3d3<<endl;
+    cout<<"average R3D3 size : "<<av_size_ef<<endl;
 
     ofstream outFile;
-    outFile.open("results/block_decoder_compare.txt", ofstream::out | ofstream::app);
+    outFile.open("results/artificial_block_decoder_ACCESS_compare/block_decoder_compare.txt", 
+        ofstream::out | ofstream::app);
 
-    outFile<<block_size<<" "<<popD<<" or "<<sum_t1<<" ef "<<sum_t2
-            <<" or_s "<<av_size_rrr<<" ef_s "<<av_size_r3d3<<endl;
+    outFile<<block_size<<" "<<pop<<" or "<<av_access_rrr<<" ef "<<av_access_ef
+            <<" or_size "<<av_size_rrr<<" ef_size "<<av_size_ef<<endl;
     outFile.close();
 }
 
@@ -1055,9 +988,66 @@ void measureFIBs(){
 
 int main() {
 
-  /* Measurements on RRR           */
-  //measureRRRSize();
-  measureRRROperation();
+  if (block_size == 3){
+    cout<<" When compiling measurements.cc, give the block size"<<endl;
+    cout<<" in the GCC parameters like this: -DBLOCK_SIZE=32 ."<<endl;
+    cout<<" Exiting..."<<endl;
+    exit(-1);
+  }
+
+#ifdef _ARTIF_
+  //inputFiles.push_back("bitmap_1000000_000001");
+  //inputFiles.push_back("bitmap_1000000_000005");
+  //inputFiles.push_back("bitmap_1000000_00001");
+  //inputFiles.push_back("bitmap_1000000_00005");
+  //inputFiles.push_back("bitmap_1000000_0001");
+  //inputFiles.push_back("bitmap_1000000_0005");
+  //inputFiles.push_back("bitmap_1000000_001");
+  //inputFiles.push_back("bitmap_1000000_005");
+  //inputFiles.push_back("bitmap_1000000_01");
+  //inputFiles.push_back("bitmap_1000000_015");
+  //inputFiles.push_back("bitmap_1000000_025");
+  //inputFiles.push_back("bitmap_1000000_035");
+  //inputFiles.push_back("bitmap_1000000_05");
+  inputFiles.push_back("bitmap_1000000_01");
+  inputFiles.push_back("bitmap_500000000_01");
+
+  /* Measurements on artificial bitmaps */
+
+  // Fig 5.-6.
+  //measureBlockDecoderAccessSpeed();
+
+  //measureCompressedBitmapSize();
+
+  measureBitmapOperation();
+
+#elif _CORPUS_
+  inputFiles.push_back("fax_calg.bin_h");
+  inputFiles.push_back("reg-1.bmp.bin_h");
+  inputFiles.push_back("phd.bmp.bin_h");
+  inputFiles.push_back("zip.bmp.bin_h");
+  inputFiles.push_back("caida_4.bmp.bin_h");
+  inputFiles.push_back("caida_8.bmp.bin_h");
+  inputFiles.push_back("caida_16.bmp.bin_h");
+#elif _TEXT_
+  inputFiles.push_back("shakespeare");
+  inputFiles.push_back("scifi_book");
+  inputFiles.push_back("bible");
+  inputFiles.push_back("chr22_genome");
+  inputFiles.push_back("chr7_genome");
+  inputFiles.push_back("coli_genome");
+  inputFiles.push_back("e.txt");
+  inputFiles.push_back("pi_1m.txt");
+  inputFiles.push_back("pi_10m.txt");
+#else
+  cout<<" There is no mode defined (_ARTIF_, _CORPUS_, _TEXT_), exit..."<<endl;
+  exit(-1);
+#endif
+
+
+  /* Measure size */
+  //measureCompressedBitmapSize();
+  //measureBitmapOperation();
 
   /* Measurements on Wavelet Trees */
   //measureWTSize();
@@ -1066,6 +1056,7 @@ int main() {
   //fix the block size and check performance against population
   //measureSizeAndOperationPerBlock();
 
+  // Fig 5.-6.
   //measureBlockDecoderAccessSpeed();
 
   //measureFIBs();

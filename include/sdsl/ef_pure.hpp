@@ -24,12 +24,11 @@
 
 #include "int_vector.hpp"
 #include "util.hpp"
-#include "r3d3_helper.hpp" // for r3d3 helper class
 #include "iterators.hpp"
 #include <vector>
 #include <algorithm> // for next_permutation
 #include <iostream>
-    
+
 
 //! Namespace for the succinct data structure library
 namespace sdsl
@@ -86,6 +85,7 @@ namespace sdsl
     //friend class rank_support_ef_pure<1, t_rac>;
     //friend class select_support_ef_pure<0, t_rac>;
     //friend class select_support_ef_pure<1, t_rac>;
+    //friend class select_support_mcl<0, 1>;
 
     //could use ef_pure_helper...
     //typedef r3d3_helper<t_bs> r3d3_helper_type;
@@ -93,6 +93,7 @@ namespace sdsl
 
   private:
     size_type    m_size = 0;  // Size of the original bit_vector.
+    uint8_t      m_bit;   //specifies which bit positions to store (0,1)
     size_type    m_popcnt; // popcount of the original bv
     bit_vector   m_lba; //lower bits
     bit_vector   m_uba; //upper bits
@@ -100,6 +101,7 @@ namespace sdsl
     size_type    m_uba_length;
     size_type    m_lower_width;
     size_type    m_msb_pos;
+    bool         m_inv;
 
     void copy(const ef_pure& ef_pure)
     {
@@ -133,12 +135,11 @@ namespace sdsl
      *  \param bv  Uncompressed bitvector.
      *  \param k   Store rank samples and pointers each k-th blocks.
      */
-    ef_pure(const bit_vector& bv)
+    ef_pure(const bit_vector& bv):m_inv(false), m_bit(1)
     {
       m_size = bv.size();
       bit_vector::const_iterator bvIt;
 
-      assert(m_size > 0);
       // Calculate popcnt and MSB position
       uint32_t msb_pos = m_size;
       m_popcnt = 0;
@@ -147,37 +148,44 @@ namespace sdsl
           m_popcnt++;
 	}
       }
-      assert(m_popcnt > 0);
+
+      // Inversion if p > 0.5
+      // we store positions of 0s
+      if ( m_popcnt > m_size/2 ){
+	m_inv = true;
+        m_bit = 0;
+        m_popcnt = m_size - m_popcnt;
+      }
 
       bvIt = bv.end();
-      while (*bvIt != 1){
+      while (*bvIt != m_bit && msb_pos != 0){
        	  --bvIt;
           --msb_pos;
       }
-      m_msb_pos = msb_pos;
+      m_msb_pos = msb_pos + 1; //start with 1
 
       // Calculate l
-      m_lower_width = log2(m_msb_pos/m_popcnt);
+      m_lower_width = (m_popcnt > 0 ? log2(m_msb_pos/m_popcnt) : 0);
 
       // Allocate memory for m_lba, m_uba
       //m_lba = bit_vector(std::max(m_popcnt*m_lower_width, (size_type)64), 0);
       m_lba = bit_vector(m_popcnt*m_lower_width, 0);
-      m_uba = bit_vector(m_popcnt+(m_msb_pos/2), 0);
+      m_uba = bit_vector(3*m_popcnt, 0);
 
       // Compression:
       uint32_t bit_pos = 0;
-      uint32_t cntOnes = 0;
+      uint32_t cntBits = 0;
       uint32_t preUpVal = 0; //initially
       uint64_t upPos = 0;
       for (bvIt = bv.begin(); bvIt != bv.end(); ++bvIt){
-        if (*bvIt == 1){
-          cntOnes++;
+        if (*bvIt == m_bit){
+          cntBits++;
 
           // LBA
           if (m_lower_width){
 	    uint32_t maskLBA = (1 << m_lower_width) - 1;
             uint32_t lowVal = bit_pos & maskLBA;
-            m_lba.set_int((cntOnes-1)*m_lower_width, lowVal, m_lower_width);
+            m_lba.set_int((cntBits-1)*m_lower_width, lowVal, m_lower_width);
           }
 
           // UBA
@@ -196,6 +204,9 @@ namespace sdsl
       }
       m_lba_length = m_popcnt*m_lower_width;
       m_uba_length = upPos;
+
+      //resize m_uba to actual length
+      m_uba.bit_resize(m_uba_length);
     }
 
     void printCompressedData(){
@@ -237,26 +248,42 @@ namespace sdsl
     value_type operator[](size_type i)const
     {
       
-      // LBA part
-      uint64_t lowVal = m_lba.get_int(i*m_lower_width, m_lower_width);
-
       // UBA part
-      uint64_t upVal;
       uint16_t gap = 1 << m_lower_width;
-      uint16_t gap_id = i / gap;
-      uint16_t nr_gaps = m_uba_length - m_popcnt;
+      uint32_t gap_id = (gap > 0) ? (i / gap) : 0;
+      size_type nr_gaps = m_uba_length - m_popcnt;
 
       // nothing is stored, value is 0
-      if ( gap_id > nr_gaps ) return false;
+      if ( gap_id > nr_gaps ) return m_inv ? 1 : 0;
 
-      uint16_t gap_pos = 0;
+      size_type uba_pos = 0;
       if ( gap_id != 0 ){
-        select_support_mcl<> sb(m_uba);//special select!!, thats a cheat!
-        gap_pos = sb(gap_id) + 1;
-      }
-      //innen todo!!!
 
-      return 0;
+        //naive select
+        size_type num_of_zeros = 0;
+        while (num_of_zeros != gap_id){
+	  if (!m_uba[uba_pos]) num_of_zeros++;
+          uba_pos++;
+        }
+
+        // special select!!, thats a cheat
+        // but does not compile in test...
+	//select_support_mcl<0, 1> sb(&m_uba);        
+        // uba_pos = sb.select(gap_id) + 1;
+      }
+
+      uint32_t lba_i;
+      uint32_t bit_pos_value;
+      while ( uba_pos < m_uba_length && m_uba[uba_pos] ){
+        lba_i = uba_pos-gap_id;
+        uint32_t lowVal = m_lba.get_int(lba_i*m_lower_width, m_lower_width);
+
+        bit_pos_value = gap_id*gap + lowVal;
+        if (bit_pos_value == i) return m_inv ? 0 : 1;
+        uba_pos++;
+      }
+
+      return m_inv ? 1 : 0;
     }
 
     /*! \param idx Starting index of the binary representation of the integer.
@@ -293,22 +320,19 @@ namespace sdsl
     {
       return m_size;
     }
-
-    //! Answers select queries
+    
     //! Serializes the data structure into the given ostream
-    //size_type serialize(std::ostream& out, structure_tree_node* v=nullptr, std::string name="")const
-    //{
-    //  structure_tree_node* child = structure_tree::add_child(v, name, util::class_name(*this));
-    //  size_type written_bytes = 0;
-    //  written_bytes += write_member(m_size, out, child, "size");
-    //  written_bytes += m_bt.serialize(out, child, "bt");
-    //  written_bytes += m_btnr.serialize(out, child, "btnr");
-    //  written_bytes += m_btnrp.serialize(out, child, "btnrp");
-    //  written_bytes += m_rank.serialize(out, child, "rank_samples");
-    //  written_bytes += m_invert.serialize(out, child, "invert");
-    //  structure_tree::add_size(child, written_bytes);
-    //  return written_bytes;
-    //}
+    size_type serialize(std::ostream& out, structure_tree_node* v=nullptr, std::string name="")const
+    {
+      structure_tree_node* child = structure_tree::add_child(v, name, util::class_name(*this));
+      size_type written_bytes = 0;
+      written_bytes += write_member(m_size, out, child, "size");
+      written_bytes += write_member(m_lower_width, out, child, "lower_width");
+      written_bytes += m_lba.serialize(out, child, "lba");
+      written_bytes += m_uba.serialize(out, child, "uba");
+      structure_tree::add_size(child, written_bytes);
+      return written_bytes;
+    }
 
     //! Loads the data structure from the given istream.
     //void load(std::istream& in)

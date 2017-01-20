@@ -31,18 +31,42 @@ inline int clz_u128 (uint128_t u) {
 int main() {
   //bit_vector b = bit_vector(80*(1<<20), 0);
 
-  bit_vector b = bit_vector(64, 0); //starting from 0
-  //b[0] = 1;
+  bit_vector b = bit_vector(16, 0); //starting from 0
+  b[0] = 1;
   //b[2] = 1;
-  //b[3] = 1;
+  b[3] = 1;
   b[5] = 1;
-  b[10] = 1;
-  //b[11] = 1;
-  b[17] = 1;
-  b[31] = 1;
-  b[48] = 1;
+  //b[6] = 1;
+  b[7] = 1;
+  //b[17] = 1;
+  //b[31] = 1;
+  //b[48] = 1;
   
-  ef_pure<> ef(b);
-  ef.printCompressedData();
+  //ef_pure<> ef(b);
+  //ef.printCompressedData();
+  // 
+  for (int i = 0; i < b.size(); ++i){
+    //cout<<"ef["<<i<<"]: "<<ef[i]<<endl; 
+  } 
 
+  //int j = 40;
+  //cout<<"ef["<<j<<"]: "<<ef[j]<<endl; 
+
+  string file="/home/nagym/DevSdsl/test/test_cases/int-vec.1000000.1.r.815";
+  bit_vector bv;
+  load_from_file(bv, file);
+
+  cout<<"bv.size(): "<<bv.size()<<endl;
+
+  ef_pure<> ef2(bv);
+  int k = 131164;
+  cout<<"bv["<<k<<"]: "<<bv[k]<<" ; ef2["<<k<<"]: "<<ef2[k]<<endl; 
+
+  for (int i = 0; i < bv.size(); ++i){
+    if (bv[i] != ef2[i]){
+      cout<<"bv["<<i<<"]: "<<bv[i]<<" ; ef2["<<i<<"]: "<<ef2[i]<<endl;
+      break;
+    }
+  }
+  
 }
