@@ -20,7 +20,7 @@
   \author Mate Nagy
 */
 #ifndef INCLUDED_SDSL_R3D3I_VECTOR
-#define INCLUDED_SDSL_R3D3I_VECTOR     
+#define INCLUDED_SDSL_R3D3I_VECTOR
 
 #include "int_vector.hpp"
 #include "util.hpp"
@@ -99,7 +99,7 @@ namespace sdsl
     // number of set bits in the block.
     bit_vector   m_btnr;   // Compressed block type numbers.
     int_vector<> m_sbtnrp;  // Sample pointers for superblocks
-    int_vector<> m_bbtnrp;  // Sample (relative) pointers for each block 
+    int_vector<> m_bbtnrp;  // Sample (relative) pointers for each block
     int_vector<> m_srank;   // Sample rank values (for superblocks)
     int_vector<> m_brank;   // Sample rank values (for blocks-relative)
     bit_vector   m_invert; // Specifies if a superblock (i.e. t_k blocks)
@@ -134,11 +134,11 @@ namespace sdsl
 
     //! Move constructor
     r3d3i_vector(r3d3i_vector&& r3d3i) : m_size(std::move(r3d3i.m_size)),
-					 m_bt(std::move(r3d3i.m_bt)),
-					 m_btnr(std::move(r3d3i.m_btnr)), 
-                                         m_sbtnrp(std::move(r3d3i.m_sbtnrp)), 
+                                         m_bt(std::move(r3d3i.m_bt)),
+                                         m_btnr(std::move(r3d3i.m_btnr)),
+                                         m_sbtnrp(std::move(r3d3i.m_sbtnrp)),
                                          m_bbtnrp(std::move(r3d3i.m_bbtnrp)),
-					 m_srank(std::move(r3d3i.m_srank)), 
+                                         m_srank(std::move(r3d3i.m_srank)),
                                          m_brank(std::move(r3d3i.m_brank)),
                                          m_invert(std::move(r3d3i.m_invert)) {}
 
@@ -170,81 +170,81 @@ namespace sdsl
       size_type num_of_superblocks = m_size/superblock_width+1;
       m_invert = bit_vector((bt_array.size()+t_k-1)/t_k, 0);
       while (pos_s + superblock_width <= m_size){
-	gt_half_t_bs = 0;
-	while (pos_b + t_bs <= pos_s){
-	  x = r3d3_helper_type::get_bt(bv, pos_b, t_bs);
-	  if (x > t_bs/2) {gt_half_t_bs++;}
-	  pos_b += t_bs;
-	}
-	//set invert bit (and below invert bt value)
-	if (gt_half_t_bs > t_k/2){
-	  m_invert[s_id] = 1;
-	}
-	s_id++;
-	pos_s += superblock_width;
+        gt_half_t_bs = 0;
+        while (pos_b + t_bs <= pos_s){
+          x = r3d3_helper_type::get_bt(bv, pos_b, t_bs);
+          if (x > t_bs/2) {gt_half_t_bs++;}
+          pos_b += t_bs;
+        }
+        //set invert bit (and below invert bt value)
+        if (gt_half_t_bs > t_k/2){
+          m_invert[s_id] = 1;
+        }
+        s_id++;
+        pos_s += superblock_width;
       }
 
       //btnr_pos stores the length of a block
       uint16_t msb_bit_pos = 0;
       while (pos + t_bs <= m_size) { // handle all blocks full blocks
-	number_type bin;
-	bt_array[ i++ ] = x = r3d3_helper_type::get_bt(bv, pos, t_bs);
-	bin = r3d3_helper_type::get_int(bv, pos, t_bs); //bin is t_bs long slice of input
-	sum_rank += x;
+        number_type bin;
+        bt_array[ i++ ] = x = r3d3_helper_type::get_bt(bv, pos, t_bs);
+        bin = r3d3_helper_type::get_int(bv, pos, t_bs); //bin is t_bs long slice of input
+        sum_rank += x;
 
-	size_type s_id = pos / superblock_width;
-	if (m_invert[s_id]){
-	  bin = ~bin;
-	  if (number_type_size > t_bs){
-	    number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
-	    bin = bin & mask;
-	  }
-	  msb_bit_pos = r3d3_helper_type::hi(bin);
+        size_type s_id = pos / superblock_width;
+        if (m_invert[s_id]){
+          bin = ~bin;
+          if (number_type_size > t_bs){
+            number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
+            bin = bin & mask;
+          }
+          msb_bit_pos = r3d3_helper_type::hi(bin);
 #ifndef R3D3_C1_NO_OPT
-	  // When C=1 (we have exactly one piece of 0 in
-	  // the inverted block) we do not use Elias-Fano
-	  if (t_bs-x == 1){
-	    btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
-	  }
-	  else {
-	    btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, t_bs-x);
-	  }
+          // When C=1 (we have exactly one piece of 0 in
+          // the inverted block) we do not use Elias-Fano
+          if (t_bs-x == 1){
+            btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
+          }
+          else {
+            btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, t_bs-x);
+          }
 #else
-	  btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, t_bs-x);
+          btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, t_bs-x);
 #endif
-	}
-	else{
-	  msb_bit_pos = r3d3_helper_type::hi(bin);
+        }
+        else{
+          msb_bit_pos = r3d3_helper_type::hi(bin);
 #ifndef R3D3_C1_NO_OPT
-	  // When C=1 we do not use Elias-Fano
-	  if (x == 1){
-	    btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
-	  }
-	  else {
-	    btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
-	  }
+          // When C=1 we do not use Elias-Fano
+          if (x == 1){
+            btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
+          }
+          else {
+            btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
+          }
 #else
-	  btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
+          btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
 #endif
-	}
-	pos += t_bs;
+        }
+        pos += t_bs;
       }
       if (pos < m_size) { // handle last not full block
-	number_type bin;
-	bt_array[ i++ ] = x = r3d3_helper_type::get_bt(bv, pos, m_size - pos);
-	bin = r3d3_helper_type::get_int(bv, pos, m_size-pos); //bin is t_bs long slice of input
-	msb_bit_pos = r3d3_helper_type::hi(bin);
-	sum_rank += x;
+        number_type bin;
+        bt_array[ i++ ] = x = r3d3_helper_type::get_bt(bv, pos, m_size - pos);
+        bin = r3d3_helper_type::get_int(bv, pos, m_size-pos); //bin is t_bs long slice of input
+        msb_bit_pos = r3d3_helper_type::hi(bin);
+        sum_rank += x;
 #ifndef R3D3_C1_NO_OPT
-	// When C=1 we do not use Elias-Fano
-	if (x == 1){
-	  btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
-	}
-	else {
-	  btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x); //last block is not inverted
-	}
+        // When C=1 we do not use Elias-Fano
+        if (x == 1){
+          btnr_pos += r3d3_helper_type::space_for_class_1(msb_bit_pos);
+        }
+        else {
+          btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x); //last block is not inverted
+        }
 #else
-	btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x); //last block is not inverted
+        btnr_pos += r3d3_helper_type::space_for_bt_i(msb_bit_pos, x); //last block is not inverted
 #endif
       }
 
@@ -252,7 +252,7 @@ namespace sdsl
       m_btnr  = bit_vector(std::max(btnr_pos, (size_type)64), 0);      // max necessary for case: t_bs == 1
       m_sbtnrp = int_vector<>((bt_array.size()+t_k-1)/t_k, 0,  bits::hi(btnr_pos)+1);
 
-      //m_bbtnr length: #of blocks, width: log2(max len of a compressed offset)=2*t_bs 
+      //m_bbtnr length: #of blocks, width: log2(max len of a compressed offset)=2*t_bs
       m_bbtnrp = int_vector<>(bt_array.size(), 0,  bits::hi(t_k*2*t_bs)+1);
       m_srank  = int_vector<>((bt_array.size()+t_k-1)/t_k + ((m_size % (t_k*t_bs))>0), 0, bits::hi(sum_rank)+1);
 
@@ -271,155 +271,155 @@ namespace sdsl
       bool invert = false;
       uint16_t rank_b = 0;
       while (pos + t_bs <= m_size) {  // handle all full blocks
-	if ((i % t_k) == (size_type)0) {
-	  m_sbtnrp[ i/t_k ] = btnr_pos;
-	  m_srank[ i/t_k ] = sum_rank;
+        if ((i % t_k) == (size_type)0) {
+          m_sbtnrp[ i/t_k ] = btnr_pos;
+          m_srank[ i/t_k ] = sum_rank;
 
-	  // calculate invert bt for that superblock
-	  m_invert[i/t_k] == 1 ? invert = true : invert = false;
-	  if (i+t_k <= bt_array.size()) {
-	    if (invert){
-	      for (size_type j=i; j < i+t_k; ++j) {
-		bt_array[j] = t_bs - bt_array[j];
-	      }
-	    }
-	  }
-	}
-	//obtaining offset's length
-	number_type bin = r3d3_helper_type::get_int(bv, pos, t_bs);
-	//do block inversion
-	if (invert){
-	  bin = ~bin;
-	  if (number_type_size > t_bs){
-	    number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
-	    bin = bin & mask; //cutting off the invalid part of the inverted block
-	  }//e.g.129 is stored as uint256_t (256-129 part are rubbish after inversion)
-	}
-	msb_bit_pos = r3d3_helper_type::hi(bin);
-	uint16_t space_for_bt;
-	x = bt_array[i];
+          // calculate invert bt for that superblock
+          m_invert[i/t_k] == 1 ? invert = true : invert = false;
+          if (i+t_k <= bt_array.size()) {
+            if (invert){
+              for (size_type j=i; j < i+t_k; ++j) {
+                bt_array[j] = t_bs - bt_array[j];
+              }
+            }
+          }
+        }
+        //obtaining offset's length
+        number_type bin = r3d3_helper_type::get_int(bv, pos, t_bs);
+        //do block inversion
+        if (invert){
+          bin = ~bin;
+          if (number_type_size > t_bs){
+            number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
+            bin = bin & mask; //cutting off the invalid part of the inverted block
+          }//e.g.129 is stored as uint256_t (256-129 part are rubbish after inversion)
+        }
+        msb_bit_pos = r3d3_helper_type::hi(bin);
+        uint16_t space_for_bt;
+        x = bt_array[i];
 #ifndef R3D3_C1_NO_OPT
-	// space_for_bt depends on the coding (EF/straight)
-	if (x == 1){
-	  space_for_bt = r3d3_helper_type::space_for_class_1(msb_bit_pos);
-	} else {
-	  space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
-	}
+        // space_for_bt depends on the coding (EF/straight)
+        if (x == 1){
+          space_for_bt = r3d3_helper_type::space_for_class_1(msb_bit_pos);
+        } else {
+          space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
+        }
 #else
-	space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
+        space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x);
 #endif
 
-	sum_rank += (invert ? (t_bs - x) : x);
+        sum_rank += (invert ? (t_bs - x) : x);
 
-	//calculating 'l' value for this block's EF compression
-	uint16_t l = (x > 0 ? log2(msb_bit_pos/x) : 0);
+        //calculating 'l' value for this block's EF compression
+        uint16_t l = (x > 0 ? log2(msb_bit_pos/x) : 0);
 
-	if (space_for_bt) { //filling m_btnr (offset container) - compress block
-	  // Error handling
-	  if (btnr_pos >= btnr_pos_final) {
-	    std::cout<<"Error: trying to overwrite m_btnr!"<<std::endl;
-	    std::cout<<" btnr_pos value: "<<btnr_pos<<" allocated space for m_btnr: "
-		     <<btnr_pos_final<<std::endl;
-	    std::cout<<"Exit now!"<<std::endl;
-	    exit(-1);
-	  }
+        if (space_for_bt) { //filling m_btnr (offset container) - compress block
+          // Error handling
+          if (btnr_pos >= btnr_pos_final) {
+            std::cout<<"Error: trying to overwrite m_btnr!"<<std::endl;
+            std::cout<<" btnr_pos value: "<<btnr_pos<<" allocated space for m_btnr: "
+                     <<btnr_pos_final<<std::endl;
+            std::cout<<"Exit now!"<<std::endl;
+            exit(-1);
+          }
 #ifndef R3D3_C1_NO_OPT
-	  // When C=1, use straight-coding
-	  if (x == 1){
-	    r3d3_helper_type::trait::set_int(m_btnr, btnr_pos, msb_bit_pos, space_for_bt);
-	  } else {
-	    r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
-	  }
+          // When C=1, use straight-coding
+          if (x == 1){
+            r3d3_helper_type::trait::set_int(m_btnr, btnr_pos, msb_bit_pos, space_for_bt);
+          } else {
+            r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
+          }
 #else
-	  r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
+          r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
 #endif
-	}
-	btnr_pos += space_for_bt;
-                
-	//if at superblock border
-	if ((i % t_k) == (size_type)0) {
-	  pos_b = space_for_bt;
-	  rank_b = (invert ? (t_bs - x) : x);
-	}
-	else {
-	  pos_b += space_for_bt;
-	  rank_b += (invert ? (t_bs - x) : x);
-	}
+        }
+        btnr_pos += space_for_bt;
 
-	//if no superblock border, save relative position
-	//and relative rank
-	m_bbtnrp[i] = pos_b;
-	m_brank[i]  = rank_b;
+        //if at superblock border
+        if ((i % t_k) == (size_type)0) {
+          pos_b = space_for_bt;
+          rank_b = (invert ? (t_bs - x) : x);
+        }
+        else {
+          pos_b += space_for_bt;
+          rank_b += (invert ? (t_bs - x) : x);
+        }
 
-	pos += t_bs;
-	i++;
+        //if no superblock border, save relative position
+        //and relative rank
+        m_bbtnrp[i] = pos_b;
+        m_brank[i]  = rank_b;
+
+        pos += t_bs;
+        i++;
       }
       if (pos < m_size) { // handle last not full block
-	if ((i % t_k) == (size_type)0) {
-	  m_sbtnrp[ i/t_k ] = btnr_pos;
-	  m_srank[ i/t_k ] = sum_rank;
-	  m_invert[ i/t_k ] = 0; // default: set last block to not inverted
+        if ((i % t_k) == (size_type)0) {
+          m_sbtnrp[ i/t_k ] = btnr_pos;
+          m_srank[ i/t_k ] = sum_rank;
+          m_invert[ i/t_k ] = 0; // default: set last block to not inverted
 
-	  invert = false;
-	}
+          invert = false;
+        }
 
-	number_type bin = r3d3_helper_type::get_int(bv, pos, m_size-pos);
-	//if last block is in an inverted superblock
-	if (invert){
-	  bin = ~bin; //invert block
-	  if (number_type_size > t_bs){ //filter the rubbish
-	    number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
-	    bin = bin & mask;
-	  }
-	}
-	msb_bit_pos = r3d3_helper_type::hi(bin);
-	uint16_t space_for_bt;
+        number_type bin = r3d3_helper_type::get_int(bv, pos, m_size-pos);
+        //if last block is in an inverted superblock
+        if (invert){
+          bin = ~bin; //invert block
+          if (number_type_size > t_bs){ //filter the rubbish
+            number_type mask = ((number_type)1<<t_bs)-(number_type)1;//t_bs long mask
+            bin = bin & mask;
+          }
+        }
+        msb_bit_pos = r3d3_helper_type::hi(bin);
+        uint16_t space_for_bt;
 #ifndef R3D3_C1_NO_OPT
-	if (x == 1){
-	  space_for_bt = r3d3_helper_type::space_for_class_1(msb_bit_pos);
-	}
-	else {
-	  space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x = bt_array[i]);
-	}
+        if (x == 1){
+          space_for_bt = r3d3_helper_type::space_for_class_1(msb_bit_pos);
+        }
+        else {
+          space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x = bt_array[i]);
+        }
 #else
-	space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x=bt_array[i]);
+        space_for_bt = r3d3_helper_type::space_for_bt_i(msb_bit_pos, x=bt_array[i]);
 #endif
 
-	// no extra dummy block added to bt_array, therefore this condition should hold
-	assert(i+1 == bt_array.size());
-	sum_rank += invert ? (t_bs - x) : x;
+        // no extra dummy block added to bt_array, therefore this condition should hold
+        assert(i+1 == bt_array.size());
+        sum_rank += invert ? (t_bs - x) : x;
 
-	//calculating 'l' value for this block's EF compression
-	uint16_t l = (x > 0 ? log2(msb_bit_pos/x) : 0);
-	if (space_for_bt) {
+        //calculating 'l' value for this block's EF compression
+        uint16_t l = (x > 0 ? log2(msb_bit_pos/x) : 0);
+        if (space_for_bt) {
 #ifndef R3D3_C1_NO_OPT
-	  // When C=1, use straight-coding
-	  if (x == 1){
-	    r3d3_helper_type::trait::set_int(m_btnr, btnr_pos, msb_bit_pos, space_for_bt);
-	  } else {
-	    r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
-	  }
+          // When C=1, use straight-coding
+          if (x == 1){
+            r3d3_helper_type::trait::set_int(m_btnr, btnr_pos, msb_bit_pos, space_for_bt);
+          } else {
+            r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
+          }
 #else
-	  r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
+          r3d3_helper_type::compress_ef(m_btnr, btnr_pos, bin, l);
 #endif
-	}
-	btnr_pos += space_for_bt;
+        }
+        btnr_pos += space_for_bt;
 
-	if ((i % t_k) == (size_type)0) {
-	  pos_b = space_for_bt;
-	  rank_b = (invert ? (t_bs - x) : x);
-	}
-	else {
-	  pos_b += space_for_bt;
-	  rank_b += (invert ? (t_bs - x) : x);
-	}
-	m_bbtnrp[i] = pos_b;
-	m_brank[i]  = rank_b;
-	i++;
+        if ((i % t_k) == (size_type)0) {
+          pos_b = space_for_bt;
+          rank_b = (invert ? (t_bs - x) : x);
+        }
+        else {
+          pos_b += space_for_bt;
+          rank_b += (invert ? (t_bs - x) : x);
+        }
+        m_bbtnrp[i] = pos_b;
+        m_brank[i]  = rank_b;
+        i++;
 
-	//assert(m_srank.size()-1 == ((i+1+t_k-1)/t_k));//mate
+        //assert(m_srank.size()-1 == ((i+1+t_k-1)/t_k));//mate
       } else { // handle last empty full block
-	assert(m_srank.size()-1 == ((i+t_k-1)/t_k));
+        assert(m_srank.size()-1 == ((i+t_k-1)/t_k));
       }
       // for technical reasons we add a last element to m_rank
       m_srank[ m_srank.size()-1 ] = sum_rank; // sum_rank contains the total number of set bits in bv
@@ -430,14 +430,14 @@ namespace sdsl
     void swap(r3d3i_vector& r3d3i)
     {
       if (this != &r3d3i) {
-	std::swap(m_size, r3d3i.m_size);
-	m_bt.swap(r3d3i.m_bt);
-	m_btnr.swap(r3d3i.m_btnr);
-	m_bbtnrp.swap(r3d3i.m_bbtnrp);
-	m_sbtnrp.swap(r3d3i.m_sbtnrp);
-	m_srank.swap(r3d3i.m_srank);
-	m_brank.swap(r3d3i.m_brank);
-	m_invert.swap(r3d3i.m_invert);
+        std::swap(m_size, r3d3i.m_size);
+        m_bt.swap(r3d3i.m_bt);
+        m_btnr.swap(r3d3i.m_btnr);
+        m_bbtnrp.swap(r3d3i.m_bbtnrp);
+        m_sbtnrp.swap(r3d3i.m_sbtnrp);
+        m_srank.swap(r3d3i.m_srank);
+        m_brank.swap(r3d3i.m_brank);
+        m_invert.swap(r3d3i.m_invert);
       }
     }
 
@@ -480,8 +480,8 @@ namespace sdsl
 
 #ifndef RRR_NO_OPT
       if (bt == 0 or bt == t_bs) { // very effective optimization
-	if (m_invert[s_id]) bt = t_bs - bt;
-	return bt>0;
+        if (m_invert[s_id]) bt = t_bs - bt;
+        return bt>0;
       }
 #endif
       uint16_t off = i % t_bs; //i - bt_idx*t_bs;
@@ -491,11 +491,11 @@ namespace sdsl
       uint16_t btnrlen;
       //if at superblock border, first block's m_bbtnrp holds its length
       if (bt_idx % t_k == 0) {
-	btnrlen = m_bbtnrp[bt_idx];
+        btnrlen = m_bbtnrp[bt_idx];
       }
       else { //if not at superblock border set btnrlen and step btnrp
-	btnrlen = abs(m_bbtnrp[bt_idx]-m_bbtnrp[bt_idx-1]);
-	btnrp += m_bbtnrp[bt_idx-1];
+        btnrlen = abs(m_bbtnrp[bt_idx]-m_bbtnrp[bt_idx-1]);
+        btnrp += m_bbtnrp[bt_idx-1];
       }
 
       //obtaining l by btnrlen and class
@@ -515,13 +515,13 @@ namespace sdsl
      *  \pre len in [1..64]
      */
     //uint64_t get_int(size_type idx, uint8_t len=64)const {Todo-1}
-        
+
 
     //! Assignment operator
     r3d3i_vector& operator=(const r3d3i_vector& r3d3i)
     {
       if (this != &r3d3i) {
-	copy(r3d3i);
+        copy(r3d3i);
       }
       return *this;
     }
@@ -648,45 +648,45 @@ namespace sdsl
       size_type btnrp = m_v->m_sbtnrp[ s_id ];
       size_type srank  = m_v->m_srank[ s_id ];
       if (s_id+1 < m_v->m_srank.size()) {
-	size_type diff_rank  = m_v->m_srank[ s_id+1 ] - srank;
+        size_type diff_rank  = m_v->m_srank[ s_id+1 ] - srank;
 #ifndef RRR_NO_OPT
-	if (diff_rank == (size_type)0) {
-	  return  rank_support_r3d3i_trait<t_b>::adjust_rank(srank, i);
-	} else if (diff_rank == (size_type)t_bs*t_k) {
-	  size_type adj_rank = srank + i - s_id*t_k*t_bs;
-	  return  rank_support_r3d3i_trait<t_b>::adjust_rank(adj_rank, i);
-	}
+        if (diff_rank == (size_type)0) {
+          return  rank_support_r3d3i_trait<t_b>::adjust_rank(srank, i);
+        } else if (diff_rank == (size_type)t_bs*t_k) {
+          size_type adj_rank = srank + i - s_id*t_k*t_bs;
+          return  rank_support_r3d3i_trait<t_b>::adjust_rank(adj_rank, i);
+        }
 #endif
       }
       uint16_t off = i % t_bs;
 
       if (!off && i == m_v->size() && bt_idx > 0) {   // needed for special case: if i=size() is a multiple of t_bs
-	// the access to m_bt would cause a invalid memory access
-	if (bt_idx % t_k == 0) {
-	  return rank_support_r3d3i_trait<t_b>::adjust_rank(srank, i);
-	}
-	else {//not at superblock border
-	  return rank_support_r3d3i_trait<t_b>::adjust_rank(srank + m_v->m_brank[bt_idx-1], i);
-	}
+        // the access to m_bt would cause a invalid memory access
+        if (bt_idx % t_k == 0) {
+          return rank_support_r3d3i_trait<t_b>::adjust_rank(srank, i);
+        }
+        else {//not at superblock border
+          return rank_support_r3d3i_trait<t_b>::adjust_rank(srank + m_v->m_brank[bt_idx-1], i);
+        }
       }
       uint16_t bt = m_v->m_bt[ bt_idx ];
 
       uint16_t btnrlen;
       //if at superblock border, first block's m_bbtnrp holds its length
       if (bt_idx % t_k == 0) {
-	btnrlen = m_v->m_bbtnrp[bt_idx];
+        btnrlen = m_v->m_bbtnrp[bt_idx];
       }
       else { //if not at superblock border set btnrlen and step btnrp, srank
-	btnrlen = abs(m_v->m_bbtnrp[bt_idx]-m_v->m_bbtnrp[bt_idx-1]);
-	btnrp += m_v->m_bbtnrp[bt_idx-1];
-	srank += m_v->m_brank[bt_idx-1];
+        btnrlen = abs(m_v->m_bbtnrp[bt_idx]-m_v->m_bbtnrp[bt_idx-1]);
+        btnrp += m_v->m_bbtnrp[bt_idx-1];
+        srank += m_v->m_brank[bt_idx-1];
       }
       uint16_t l = (bt > 0 ? r3d3_helper_type::size_of_l(btnrlen, bt) : 0);
 
       //returns rank in a block
       uint16_t rank_b = r3d3_helper_type::rank_on_ef_block_i(m_v->m_btnr, btnrp, btnrlen, l, bt, off);
       if (m_v->m_invert[s_id]) rank_b = off - rank_b;
-           
+
       return rank_support_r3d3i_trait<t_b>::adjust_rank(srank + rank_b, i);
     }
 
@@ -711,7 +711,7 @@ namespace sdsl
     rank_support_r3d3i& operator=(const rank_support_r3d3i& rs)
     {
       if (this != &rs) {
-	set_vector(rs.m_v);
+        set_vector(rs.m_v);
       }
       return *this;
     }
@@ -763,7 +763,7 @@ namespace sdsl
     size_type select1(size_type i)const
     {
       if (m_v->m_srank[m_v->m_srank.size()-1] < i)
-	return size();
+        return size();
 
       //if ( i <= 0 ) return -1;
 
@@ -773,13 +773,13 @@ namespace sdsl
       // invariant:  m_rank[end]   >= i
       //             m_rank[begin]  < i
       while (end_sb-begin_sb > 1) {
-	idx  = (begin_sb+end_sb) >> 1; // idx in [0..m_rank.size()-1]
-	rank = m_v->m_srank[idx];
-	if (rank >= i)
-	  end_sb = idx;
-	else { // rank < i
-	  begin_sb = idx;
-	}
+        idx  = (begin_sb+end_sb) >> 1; // idx in [0..m_rank.size()-1]
+        rank = m_v->m_srank[idx];
+        if (rank >= i)
+          end_sb = idx;
+        else { // rank < i
+          begin_sb = idx;
+        }
       }
       //   (2) linear search within the samples (superblock)
       // Modified to binary search within the samples
@@ -788,7 +788,7 @@ namespace sdsl
       size_type diff_rank  = m_v->m_srank[end_sb] - rank;
 #ifndef RRR_NO_OPT
       if (diff_rank == (size_type)t_bs*t_k) {// optimisation for select<1>
-	return idx*t_bs + i-rank -1;
+        return idx*t_bs + i-rank -1;
       }
 #endif
       const bool inv = m_v->m_invert[ begin_sb ];
@@ -799,35 +799,35 @@ namespace sdsl
       size_type end_b;
       //if not last superblock
       if ( end_sb != m_v->m_srank.size()-1 )
-	end_b = end_sb*t_k;
+        end_b = end_sb*t_k;
       else
-	end_b = m_v->m_brank.size()-1;
+        end_b = m_v->m_brank.size()-1;
 
       size_type rank_b = rank; //holds cummulative rank
       while (end_b-begin_b > 1){
-	idx  = (begin_b+end_b) >> 1;
-	rank_b = m_v->m_brank[idx] + rank;
+        idx  = (begin_b+end_b) >> 1;
+        rank_b = m_v->m_brank[idx] + rank;
 
-	if (rank_b >= i){
-	  end_b = idx;
-	}
-	else {
-	  begin_b = idx;
-	}
-      } 
-            
+        if (rank_b >= i){
+          end_b = idx;
+        }
+        else {
+          begin_b = idx;
+        }
+      }
+
       // Correction because m_brank[0] != 0
       // but holds the rank of the first block
       // if not at superblock border or at
       // sb border but end_b holds the required block
       if (begin_b % t_k != 0 || i > rank + m_v->m_brank[begin_b]){
-	idx = end_b;
-	btnrlen = abs(m_v->m_bbtnrp[idx]-m_v->m_bbtnrp[idx-1]);
-	btnrp += m_v->m_bbtnrp[idx-1];
+        idx = end_b;
+        btnrlen = abs(m_v->m_bbtnrp[idx]-m_v->m_bbtnrp[idx-1]);
+        btnrp += m_v->m_bbtnrp[idx-1];
       }
       else {
-	idx = begin_b;
-	btnrlen = m_v->m_bbtnrp[idx];
+        idx = begin_b;
+        btnrlen = m_v->m_bbtnrp[idx];
       }
 
       bt = m_v->m_bt[idx];
@@ -872,7 +872,7 @@ namespace sdsl
     select_support_r3d3i& operator=(const select_support_r3d3i& rs)
     {
       if (this != &rs) {
-	set_vector(rs.m_v);
+        set_vector(rs.m_v);
       }
       return *this;
     }

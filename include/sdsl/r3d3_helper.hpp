@@ -194,13 +194,13 @@ namespace sdsl
 
   };
 
-  // For fixed length EF compression (R3D3). 
-  // Length only depends on 'c' but not on 
+  // For fixed length EF compression (R3D3).
+  // Length only depends on 'c' but not on
   // 'B', however it consumes more space
   template<uint16_t n> //n is blocksize
   struct r3d3_len_ef_table {
     static struct impl {
-      uint16_t table[n+1];              
+      uint16_t table[n+1];
 
       impl() {
         //initialize with 0s
@@ -350,7 +350,7 @@ namespace sdsl
     //  l  : length of an LBA item
     //
     template<class bit_vector_type>
-    static inline void createLBA(bit_vector_type& btnr, 
+    static inline void createLBA(bit_vector_type& btnr,
                                  typename bit_vector_type::size_type pos,
                                  const number_type &bin, const uint16_t &l){
       uint32_t lowVal = 0;
@@ -387,9 +387,9 @@ namespace sdsl
     //  bin: number to be compressed, input
     //  l  : length of an LBA item
     //
-    //  We use negated unary code 
+    //  We use negated unary code
     template<class bit_vector_type>
-    static inline void createUBA(bit_vector_type& btnr, 
+    static inline void createUBA(bit_vector_type& btnr,
                                  typename bit_vector_type::size_type pos,
                                  const number_type &bin, const uint16_t &l){
       number_type num     = bin;
@@ -478,7 +478,7 @@ namespace sdsl
       else{
         uba[0] = trait::get_int(bv, btnrp + lba_width, chunk_size);
         uba[1] = trait::get_int(bv, btnrp + lba_width + chunk_size, uba_width-chunk_size);
-        
+
         nr_gaps_0 = trait::popcount(uba[0]);
         popcnt_0 = chunk_size - nr_gaps_0;
 
@@ -516,7 +516,7 @@ namespace sdsl
         return 0;
       } else if (r_i == 0){
         return 0;
-      } else if (bt == n) { // if bt==n then the encoded block consists only of ones     
+      } else if (bt == n) { // if bt==n then the encoded block consists only of ones
         return r_i;
       }
 #endif
@@ -527,7 +527,7 @@ namespace sdsl
         return (r_i > bit_pos) ? 1 : 0;
       }
 #endif
-     
+
       //choose proper uba chunk
       uint16_t lba_width = bt*l;
       uint16_t uba_width = btnrlen-lba_width;
@@ -541,13 +541,13 @@ namespace sdsl
       uint16_t nr_gaps;
       uint16_t rank = 0;
 
-      // Read the first chunk, and 2nd if exists 
+      // Read the first chunk, and 2nd if exists
       if (uba_width <= chunk_size){
         uba[0] = trait::get_int(bv, btnrp + lba_width, uba_width);
         nr_gaps = trait::popcount(uba[0]);
         uba_width_eff = nr_gaps + bt;
         //requested gap is greater than what we have stored
-        if (gap_id > nr_gaps) return bt; 
+        if (gap_id > nr_gaps) return bt;
       }
       // If UBA fits into 2 chunks, we need to
       // find the chunk in which the gap resides
@@ -557,12 +557,12 @@ namespace sdsl
         uba[1] = trait::get_int(bv, btnrp + lba_width + chunk_size, uba_width-chunk_size);
         nr_gaps_0 = trait::popcount(uba[0]);
         uba_width_eff = nr_gaps_0 + trait::popcount(uba[1]) + bt;
-        nr_gaps = uba_width_eff - bt;        
-        
+        nr_gaps = uba_width_eff - bt;
+
         // Check if gap is in the 2nd chunk
-        // if it is, normalize gap_id and 
+        // if it is, normalize gap_id and
         // add popcnt(uba[0]) to rank
-        if (nr_gaps_0 < gap_id){          
+        if (nr_gaps_0 < gap_id){
           if (gap_id > nr_gaps) return bt;
           chunk_id = 1;
         }
@@ -572,7 +572,7 @@ namespace sdsl
       // gap_id. In the UBA we store negated unary
       // code, where 0 indicates value and 1 means gap.
       // Val_pos points to the pos of gap_id. The next
-      // bit has meaning for us. 
+      // bit has meaning for us.
       uint16_t gap_pos = 0;
       uint16_t bit_pos_value = 0, lba_i;
       uint16_t curr_gap_id = chunk_id ? gap_id-nr_gaps_0 : gap_id;
@@ -625,7 +625,7 @@ namespace sdsl
         return 0;
       } else if (r_i == 0){
         return 0;
-      } else if (bt == n) { // if bt==n then the encoded block consists only of ones     
+      } else if (bt == n) { // if bt==n then the encoded block consists only of ones
         return r_i;
       }
 #endif
@@ -636,7 +636,7 @@ namespace sdsl
         return (r_i > bit_pos) ? 1 : 0;
       }
 #endif
-     
+
       //choose proper uba chunk
       uint16_t lba_width = bt*l;
       uint16_t uba_width = btnrlen-lba_width;
@@ -648,9 +648,9 @@ namespace sdsl
       uint16_t nr_gaps_0 = 0;
       uint16_t nr_gaps = uba_width - bt;
       uint16_t rank = 0;
- 
-      // If requested gap_id is greater what 
-      // we store, rank is bt 
+
+      // If requested gap_id is greater what
+      // we store, rank is bt
       if (gap_id > nr_gaps) return bt;
 
       // Read the first chunk, and 2nd if exists
@@ -666,7 +666,7 @@ namespace sdsl
         nr_gaps_0 = trait::popcount(uba[0]);
 
         // Check if gap is in the 2nd chunk
-        // if it is, normalize gap_id and 
+        // if it is, normalize gap_id and
         // add popcnt(uba[0]) to rank
         if (nr_gaps_0 < gap_id){
           chunk_id = 1;
@@ -677,7 +677,7 @@ namespace sdsl
       // gap_id. In the UBA we store negated unary
       // code, where 0 indicates value and 1 means gap.
       // Val_pos points to the pos of gap_id. The next
-      // bit has meaning for us. 
+      // bit has meaning for us.
       uint16_t gap_pos = 0;
       uint16_t bit_pos_value = 0, lba_i;
       uint16_t curr_gap_id = chunk_id ? gap_id-nr_gaps_0 : gap_id;
@@ -730,7 +730,7 @@ namespace sdsl
       if (!inv) return decode_value_ef(bv, btnrp, btnrlen, l, bt, s_i);
 
       // ------- for inverted offset we need below part -------
-      //         this part should not be called much 
+      //         this part should not be called much
       //         since p < 0.5 is our use case
       //else
       // 1.) decompress 0 bit positions and define from those
@@ -951,7 +951,7 @@ namespace sdsl
         }
       }
 
-      // Find the position of the value, next to the 
+      // Find the position of the value, next to the
       // gap_id. In the UBA we store negated unary
       // code, where 0 indicates value and 1 means gap
       uint16_t gap_pos = 0;

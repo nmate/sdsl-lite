@@ -138,11 +138,11 @@ namespace sdsl
     //! Move constructor
     rrri_vector(rrri_vector&& rrri) : m_size(std::move(rrri.m_size)),
                                       m_bt(std::move(rrri.m_bt)),
-                                      m_btnr(std::move(rrri.m_btnr)), 
+                                      m_btnr(std::move(rrri.m_btnr)),
                                       m_sbtnrp(std::move(rrri.m_sbtnrp)),
-                                      m_bbtnrp(std::move(rrri.m_bbtnrp)), 
+                                      m_bbtnrp(std::move(rrri.m_bbtnrp)),
                                       m_srank(std::move(rrri.m_srank)),
-                                      m_brank(std::move(rrri.m_brank)), 
+                                      m_brank(std::move(rrri.m_brank)),
                                       m_invert(std::move(rrri.m_invert)) {}
 
     //! Constructor
@@ -189,7 +189,7 @@ namespace sdsl
       // (2) calculate block type numbers and pointers into btnr and rank samples
       pos = 0; i = 0;
       btnr_pos= 0, sum_rank = 0;
-      size_type pos_b = 0; //for storing relative index 
+      size_type pos_b = 0; //for storing relative index
       uint16_t rank_b = 0;
       bool invert = false;
       while (pos + t_bs <= m_size) {  // handle all full blocks
@@ -257,7 +257,7 @@ namespace sdsl
           rrr_helper_type::set_bt(m_btnr, btnr_pos, nr, space_for_bt);
         }
         btnr_pos += space_for_bt;
-                
+
         if ((i % t_k) == (size_type)0) {
           pos_b = space_for_bt;
           rank_b = (invert ? (t_bs - x) : x);
@@ -324,12 +324,12 @@ namespace sdsl
       uint16_t off = i % t_bs; //i - bt_idx*t_bs;
       size_type btnrp = m_sbtnrp[ sample_pos ];
 
-      //if not at superblock border step btnrp 
+      //if not at superblock border step btnrp
       if (bt_idx % t_k != 0) {
         btnrp += m_bbtnrp[bt_idx-1];
       }
 
-      uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);          
+      uint16_t btnrlen = rrr_helper_type::space_for_bt(bt);
       number_type btnr = rrr_helper_type::decode_btnr(m_btnr, btnrp, btnrlen);
       return rrr_helper_type::decode_bit(bt, btnr, off);
     }
@@ -523,7 +523,7 @@ namespace sdsl
         }
 #endif
       }
-      const bool inv = m_v->m_invert[ sample_pos ];          
+      const bool inv = m_v->m_invert[ sample_pos ];
       uint16_t off = i % t_bs;
 
       if (!off && i == m_v->size() && bt_idx > 0) {   // needed for special case: if i=size() is a multiple of t_bs
@@ -536,9 +536,9 @@ namespace sdsl
         }
       }
       uint16_t bt = inv ? t_bs - m_v->m_bt[ bt_idx ] : m_v->m_bt[ bt_idx ];
-            
+
       //if not at superblock border set btnrlen and step btnrp, srank
-      if (bt_idx % t_k != 0) {           
+      if (bt_idx % t_k != 0) {
         btnrp += m_v->m_bbtnrp[bt_idx-1];
         srank += m_v->m_brank[bt_idx-1];
       }
@@ -692,7 +692,7 @@ namespace sdsl
     }
 
     // To be reviewed, but not necessary for my case
-    /* size_type select0(size_type i)const 
+    /* size_type select0(size_type i)const
       {
       if ((size() - m_v->m_rank[m_v->m_rank.size()-1]) < i) {
       return size();

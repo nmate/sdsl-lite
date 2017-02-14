@@ -131,10 +131,10 @@ namespace sdsl
 
     //! Move constructor
     r3d3_vector(r3d3_vector&& r3d3) : m_size(std::move(r3d3.m_size)),
-				      m_bt(std::move(r3d3.m_bt)),
-				      m_btnr(std::move(r3d3.m_btnr)), 
+                                      m_bt(std::move(r3d3.m_bt)),
+                                      m_btnr(std::move(r3d3.m_btnr)),
                                       m_btnrp(std::move(r3d3.m_btnrp)),
-				      m_rank(std::move(r3d3.m_rank)), 
+                                      m_rank(std::move(r3d3.m_rank)),
                                       m_invert(std::move(r3d3.m_invert)) {}
 
     //! Constructor
@@ -364,7 +364,7 @@ namespace sdsl
      *
      *  Todo-1: this should be implemented for R3D3 for testing purposes
      *          Anyhow bit exactness is already ensured, so this seems to be an overkill
-     * 
+     *
      */
     //uint64_t get_int(size_type idx, uint8_t len=64)const { Todo-1 }
 
@@ -499,7 +499,7 @@ namespace sdsl
         } else if (diff_rank == (size_type)t_bs*t_k) {
           size_type adj_rank = rank + i - s_id*t_k*t_bs;
           return  rank_support_r3d3_trait<t_b>::adjust_rank(
-							    adj_rank, i);
+                                                            adj_rank, i);
         }
 #endif
       }
@@ -632,7 +632,7 @@ namespace sdsl
       return (idx-1) * t_bs + pos_in_b;
     }
 
-    /*size_type select0(size_type i)const {Todo} */ 
+    /*size_type select0(size_type i)const {Todo} */
 
 
   public:
