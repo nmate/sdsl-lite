@@ -85,14 +85,19 @@ make r3d3-select-support-test
 
 Bug Reporting
 ------------
-Mail <will be published later>
+
+Mail:
+nagym-at-tmit-dot-bme-dot-hu
 
 Licensing
 ---------
-<will be detailed later>
+
+R3D3 is a free software provided under the GNU General Public License (GPLv3). 
+Copyright (C) 2017 Mate Nagy All Right Reserved.
+See the GNU General Public License for more details.
 
 Authors
 -------
-<will be detailed later>
+Mate Nagy
 
 [SDSLLIT]: https://github.com/simongog/sdsl-lite/wiki/Literature "Succinct Data Structure Literature"
