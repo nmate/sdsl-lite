@@ -13,13 +13,13 @@
 const uint64_t BIG_PRIME = 15485863; 
 
 #define MAX_NUM_OF_RUNS 1
-#define NUM_OF_QUERIES 100
+#define NUM_OF_QUERIES 1000
 
 #define ACCESS  0x1
 #define RANK    0x2
 #define SELECT  0x3
 
-#define OP_MODE ACCESS
+#define OP_MODE SELECT
 
 #define INPUT_PATH "/home/nagym/DevSdsl/measurements/input"
 #define RESULT_PATH "/home/nagym/DevSdsl/measurements/results"
@@ -173,7 +173,8 @@ void measureCompressedBitmapSize(){
     outFile.open(resFile, ofstream::out | ofstream::app);
 
     outFile<<block_size<<" "<<popD<<" rrr "<<size_rrr_Mb<<" rrri "<<size_rrri_Mb<<
-      " r3d3 "<<size_r3d3_Mb<<" r3d3i "<<size_r3d3i_Mb<<" en "<<entropy<<" "<<*f_it<<endl;
+      " r3d3 "<<size_r3d3_Mb<<" r3d3i "<<size_r3d3i_Mb<<" ef_pure "<<size_ef_pure_Mb<<
+      " en "<<entropy<<" "<<*f_it<<endl;
     //" en "<<entropy<<endl;
 
     outFile.close();
@@ -996,21 +997,21 @@ int main() {
   }
 
 #ifdef _ARTIF_
-  //inputFiles.push_back("bitmap_1000000_000001");
-  //inputFiles.push_back("bitmap_1000000_000005");
-  //inputFiles.push_back("bitmap_1000000_00001");
-  //inputFiles.push_back("bitmap_1000000_00005");
-  //inputFiles.push_back("bitmap_1000000_0001");
-  //inputFiles.push_back("bitmap_1000000_0005");
-  //inputFiles.push_back("bitmap_1000000_001");
-  //inputFiles.push_back("bitmap_1000000_005");
-  //inputFiles.push_back("bitmap_1000000_01");
-  //inputFiles.push_back("bitmap_1000000_015");
-  //inputFiles.push_back("bitmap_1000000_025");
-  //inputFiles.push_back("bitmap_1000000_035");
-  //inputFiles.push_back("bitmap_1000000_05");
-  inputFiles.push_back("bitmap_1000000_01");
+  inputFiles.push_back("bitmap_500000000_000001");
+  inputFiles.push_back("bitmap_500000000_000005");
+  inputFiles.push_back("bitmap_500000000_00001");
+  inputFiles.push_back("bitmap_500000000_00005");
+  inputFiles.push_back("bitmap_500000000_0001");
+  inputFiles.push_back("bitmap_500000000_0005");
+  inputFiles.push_back("bitmap_500000000_001");
+  inputFiles.push_back("bitmap_500000000_005");
   inputFiles.push_back("bitmap_500000000_01");
+  inputFiles.push_back("bitmap_500000000_015");
+  inputFiles.push_back("bitmap_500000000_025");
+  inputFiles.push_back("bitmap_500000000_035");
+  inputFiles.push_back("bitmap_500000000_05");
+  //inputFiles.push_back("bitmap_1000000_01");
+  //inputFiles.push_back("bitmap_500000000_01");
 
   /* Measurements on artificial bitmaps */
 
