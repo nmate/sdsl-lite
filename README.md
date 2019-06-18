@@ -78,9 +78,9 @@ can be done by
 
 ```sh
 cd sdsl-lite/build
-make xxxx-bit-vector-test
-make xxxx-rank-support-test
-make xxxx-select-support-test
+make r3d3-bit-vector-test
+make r3d3-rank-support-test
+make r3d3-select-support-test
 ```
 
 Bug Reporting
@@ -98,6 +98,6 @@ See the GNU General Public License for more details.
 
 Authors
 -------
-REMOVED
+Mate Nagy
 
 [SDSLLIT]: https://github.com/simongog/sdsl-lite/wiki/Literature "Succinct Data Structure Literature"
